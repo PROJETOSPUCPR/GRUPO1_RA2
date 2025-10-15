@@ -1,5 +1,94 @@
 # GRUPO_1_RA2
+
 Comparativo de algoritmos de cache em um leitor de textos com simulação de desempenho.
+
+Aluno A – Interface principal (ra2_main.py)
+Função e responsabilidade
+
+O arquivo ra2_main.py é o ponto de entrada do projeto.
+Ele fornece uma interface simples no terminal que permite:
+
+Escolher qual algoritmo de cache será usado: FIFO, LRU, LFU ou MRU;
+
+Informar o número do texto que deseja abrir (de 1 a 100);
+
+Executar o modo de simulação (-1), que chama os módulos da pasta simulation/;
+
+Encerrar o programa (0).
+
+O objetivo é facilitar os testes práticos dos algoritmos e coletar métricas de tempo de acesso, hits e requisições.
+
+Estrutura do menu
+Escolha o algoritmo:
+1. FIFO
+2. LRU
+3. LFU
+4. MRU
+-1. Simulação
+0. Sair
+
+
+Após escolher o algoritmo, o usuário informa o número do texto a ser carregado:
+
+Número do texto (0=voltar):
+
+
+O programa verifica se o arquivo texts/<n>.txt existe.
+Se não existir, mostra:
+
+→ O arquivo texts/123.txt não existe. Tente outro número.
+
+
+e solicita novamente o número, sem encerrar o programa.
+
+Integração com os algoritmos
+
+Conforme a opção escolhida, o ra2_main.py chama diretamente as funções:
+
+fifo_fun(True, cache, bloco=n)
+lru_fun(True,  cache, bloco=n)
+mru_fun(True,  cache, bloco=n)
+
+
+ou utiliza a classe LFUCache no caso do algoritmo LFU.
+
+Cada execução exibe:
+
+Tempo médio de resposta (ms);
+
+Contadores de hits e requisições (requests).
+
+Modo de simulação
+
+Ao escolher -1, o programa importa e executa:
+
+from simulator import run_full_simulation
+run_full_simulation()
+
+
+O módulo simulation/simulator.py utiliza data_collector.py e report_generator.py para:
+
+Simular 3 usuários, cada um com 200 solicitações;
+
+Gerar acessos conforme três distribuições:
+
+Aleatória pura;
+
+Poisson;
+
+Ponderada (43 % de chance para textos 30–40);
+
+Avaliar os algoritmos FIFO, LRU e LFU, coletando dados de hit/miss e tempo;
+
+Salvar gráficos e relatório final na pasta docs/.
+
+Exemplo de uso
+python ra2_main.py
+# Escolha 1 para FIFO
+# Digite o número do texto (ex: 7)
+# Saída esperada:
+TEXTO
+# [Tempo: 3.2 ms] | Hits: 2 | Reqs: 5
 
 ---
 
