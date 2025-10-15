@@ -1,56 +1,43 @@
-from time import time
+from time import perf_counter
 
 from algorithms.leitor_arquivos import ler_arquivo
 from algorithms.cache_arquivos import CacheArquivos
 
 
-def fifo(dinamico: bool, cache_arquivos: CacheArquivos, blocos: list[int] | None = None, bloco: int | None = None) -> float:
+def medir_fifo(verboso: bool, cache_arquivos: CacheArquivos, id_arquivo: int) -> float:
     """
-    Função de gerenciamento de cache FIFO. Pode ser usada de
-    maneira dinâmica, recebendo um cache e um valor, 
-    ou de maneira estática, recebendo um cache e um array de valores.
-    No modo Dinâmico, o conteúdo do arquivo será exibido.
+    Função de medição da performance do FIFO. Pode ser usada de
+    maneira verbosa ou não verbosa, exibindo ou não o conteúdo do arquivo
 
         Args:
-            dinamico (bool): Escolhe entre estático e dinâmico.
-            cache (CacheArquivos): Cache que será atualizado.
-            blocos (list[int] | None): Itens que serão inseridos no cache em caso estático. Não é usado em caso dinâmico
-            bloco (int | None): Arquivo que será inserido no cache em caso dinâmico. Não é usado em caso estático
+            verboso (bool): Escolhe entre exibir ou não o conteúdo do arquivo.
+            cache_arquivos (CacheArquivos): Cache que será atualizado.
+            id_arquivo (int): Arquivo que será inserido no cache.
 
         Returns:
             float: Tempo que levou para executar 
 
         Examples:
-            >>> cache_arquivos = CacheArquivos()
-            >>> fifo(False, cache_arquivos, [1,2,3,4])
-            0.00238
-            >>> fifo(True, cache=cache_arquivos, bloco=1)
+            >>> medir_fifo(True, cache=cache_arquivos, id_arquivo=1)
             0.00238
     """
 
-    tempo_inicio = time()
+    tempo_inicio = perf_counter()
 
-    if dinamico and bloco:
-        texto = verifica_cache(cache_arquivos, bloco)
-        print(f"Primeiras 300 posicoes do texto:\n{texto[:300]}")
-
-    elif blocos:
-        for bloco in blocos:
-            verifica_cache(cache_arquivos, bloco)
-
-    else:
-        raise ValueError("Argumentos inválidos/faltado.")
-    tempo_fim = time()
+    texto = fifo(cache_arquivos, id_arquivo)
+    if verboso and id_arquivo:
+        print(f"Conteúdo do arquivo:\n{texto}")
+    tempo_fim = perf_counter()
     tempo_total = tempo_fim-tempo_inicio
     return tempo_total
 
 
-def verifica_cache(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
+def fifo(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
     """
-    Função auxiliar para verificar o cache. Faz principalmente 3 coisas:
-    1. Verifica se o arquivo está no cache
-    2. Caso não esteja. tenta inserir o arquivo no cache
-    3. Caso não consiga inserir, o cache esta cheio. Nesse caso, remove o arquivo que esta a mais tempo e tenta novamente
+    Função principal de FIFO. Implementada em 3 passos principais:
+    1. Verifica se o arquivo está no cache.
+    2. Caso não esteja. tenta inserir o arquivo no cache.
+    3. Caso não consiga inserir, o cache esta cheio. Nesse caso, remove o que foi inserido primeiro (FIFO) e tenta novamente.
 
     Args:
         cache (list[dict] | None)): Cache que será atualizado.
@@ -61,11 +48,9 @@ def verifica_cache(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
 
         Examples:
             >>> cache_arquivos = CacheArquivos()
-            >>> verifica_cache(cache=cache_arquivos, bloco=1, 10)
-            'Lore Ipsum ...'
+            >>> fifo(cache_arquivos=cache_arquivos, id_arquivo=1)
+            'Lorem Ipsum ...'
     """
-
-    cache_arquivos.inc_requests()  # aumenta o contador de requisicoes ao cache
 
     if not cache_arquivos.contem_arquivo(id_arquivo):
         # arquivo nao esta no cache
@@ -78,6 +63,42 @@ def verifica_cache(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
         # arquivo estava no cache
         arquivo = cache_arquivos.get_arquivo_pelo_id(
             id_arquivo)  # Pega o arquivo de dentro do cache
-        cache_arquivos.inc_hits()
 
     return arquivo
+
+
+def tests():
+    print("="*8, "TESTE FIFO", "="*8)
+    cache_arquivos_hits = CacheArquivos()
+    cache_arquivos_sem_hits = CacheArquivos()
+
+    # 30 números de 1 a 15 -> nenhum hit possível
+    arqs_sem_hit = [(i % 15) + 1 for i in range(30)] 
+
+
+    # Sequência para testar FIFO
+    arqs_com_hit = [
+        1,2,3,4,5,6,7,8,9,10,   # Enche o cache
+        3,5,7,9,                # Gera hits
+        11,12,13,14,15,16,      # Gera substituições (remove 1–6)
+        7,8,9,10,7,8,9,10,7,8   # Gera mais 10 hits
+    ]
+
+    tempo_sem_hits = 0
+    tempo_hits = 0
+
+    for arq in arqs_sem_hit:
+        tempo_sem_hits += medir_fifo(False, cache_arquivos_sem_hits, arq)
+
+    for arq in arqs_com_hit:
+        tempo_hits += medir_fifo(False, cache_arquivos_hits, arq)
+
+    print(f"Tempo sem hits: {tempo_sem_hits}")
+    print(f"Tempo com hits: {tempo_hits}")
+
+    print(f"Hits esperados no caso sem hits: 0\nHits obtidos: {cache_arquivos_sem_hits.get_hits()}")
+    print(f"Hits esperados no caso com hits: 8\nHits obtidos: {cache_arquivos_hits.get_hits()}")
+
+    assert (tempo_sem_hits > tempo_hits)
+    assert (cache_arquivos_sem_hits.get_hits() == 0)
+    assert (cache_arquivos_hits.get_hits() == 14)

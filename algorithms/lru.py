@@ -1,65 +1,54 @@
-from time import time
+from time import perf_counter
 
 from algorithms.leitor_arquivos import ler_arquivo
 from algorithms.cache_arquivos import CacheArquivos
 
-def lru(dinamico: bool, cache_arquivos: CacheArquivos, blocos: list[int] | None = None, bloco: int | None = None) -> float:
 
+def medir_lru(verboso: bool, cache_arquivos: CacheArquivos, id_arquivo: int) -> float:
     """
-    Função de gerenciamento de cache LRU. Pode ser usada de 
-    maneira dinâmica, recebendo um cache e um valor, 
-    ou de maneira estática, recebendo um cache e um array de valores.
-    No modo Dinâmico, o conteúdo do arquivo será exibido.
+    Função de medição da performance do LRU. Pode ser usada de
+    maneira verbosa ou não verbosa, exibindo ou não o conteúdo do arquivo
 
         Args:
-            dinamico (bool): Escolhe entre estático e dinâmico.
-            cache (CacheArquivos): Cache que será atualizado.
-            blocos (list[int] | None): Itens que serão inseridos no cache em caso estático. Não é usado em caso dinâmico
-            bloco (int | None): Arquivo que será inserido no cache em caso dinâmico. Não é usado em caso estático
+            verboso (bool): Escolhe entre exibir ou não o conteúdo do arquivo.
+            cache_arquivos (CacheArquivos): Cache que será atualizado.
+            id_arquivo (int): Arquivo que será inserido no cache.
 
         Returns:
             float: Tempo que levou para executar 
 
         Examples:
-            >>> cache_arquivos = CacheArquivos()
-            >>> lru(False, cache_arquivos, [1,2,3,4])
-            0.00238
-            >>> lru(True, cache=cache_arquivos, bloco=1)
+            >>> medir_lru(True, cache=cache_arquivos, id_arquivo=1)
             0.00238
     """
 
-    tempo_inicio = time()
-    if dinamico and bloco:
-        texto = verifica_cache(cache_arquivos, bloco)
-        print(f"Primeiras 300 posicoes do texto:\n{texto[:300]}")
-    elif blocos:
-        for bloco in blocos:
-            verifica_cache(cache_arquivos, bloco)
-    else:
-        raise ValueError("Argumentos inválidos/faltado.")
-    tempo_fim = time()
+    tempo_inicio = perf_counter()
+    texto = lru(cache_arquivos, id_arquivo)
+    if verboso:
+        print(f"Conteúdo do arquivo:\n{texto}")
+    tempo_fim = perf_counter()
     tempo_total = tempo_fim-tempo_inicio
     return tempo_total
 
-def verifica_cache(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
+
+def lru(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
     """
-    Função auxiliar para verificar o cache. Faz principalmente 3 coisas:
-    1. Verifica se o arquivo está no cache, caso esteja, move o arquivo para o fim da lista.
-    2. Caso não esteja, tenta inserir o arquivo no cache
-    3. Caso não consiga inserir, o cache esta cheio. Nesse caso, remove o arquivo que esta a mais tempo e tenta novamente
+    Função principal de LRU. Implementada em 3 passos principais::
+    1. Verifica se o arquivo está no cache, caso esteja, move o arquivo para o final da lista (Usado Menos Recentemente).
+    2. Caso não esteja, tenta inserir o arquivo no cache.
+    3. Caso não consiga inserir, o cache esta cheio. Nesse caso, remove o arquivo primeiro da lista (Usado Menos Recentemente) e tenta novamente.
 
     Args:
-        cache (list[dict] | None)): Cache que será atualizado.
-        bloco (int | None): Arquivo que será inserido no cache.
+        cache_arquivos (CacheArquivos): Cache que será atualizado.
+        id_arquivo (int | None): ID do arquivo que será inserido no cache.
         Returns:
             str: Texto carregado
         Examples:
             >>> cache_arquivos = CacheArquivos()
-            >>> verifica_cache(cache=cache_arquivos, bloco=1, 10)
-            'Lore Ipsum ...'
+            >>> verifica_cache(cache_arquivos=cache_arquivos, id_arquivo=1)
+            'Lorem Ipsum ...'
 
     """
-    cache_arquivos.inc_requests()  # aumenta o contador de requisicoes ao cache
     if not cache_arquivos.contem_arquivo(id_arquivo):
         # arquivo nao esta no cache
         arquivo = ler_arquivo(id_arquivo)
@@ -70,8 +59,44 @@ def verifica_cache(cache_arquivos: CacheArquivos, id_arquivo: int) -> str:
     else:
         cache_arquivos.move_para_final(id_arquivo)
         # arquivo estava no cache
-        arquivo = cache_arquivos.get_arquivo_pelo_id(id_arquivo)  # Pega o arquivo de dentro do cache
-        cache_arquivos.inc_hits()
+        arquivo = cache_arquivos.get_arquivo_pelo_id(
+            id_arquivo)  # Pega o arquivo de dentro do cache
     return arquivo
 
 
+def tests():
+    print("="*8, "TESTE LRU", "="*8)
+    cache_arquivos_hits = CacheArquivos()
+    cache_arquivos_sem_hits = CacheArquivos()
+
+    # 30 números de 1 a 15 -> nenhum hit possível
+    arqs_sem_hit = [(i % 15) + 1 for i in range(30)]
+
+    # Sequência para testar LRU
+    arqs_com_hit = [
+        1,2,3,4,5,6,7,8,9,10,   # Enche cache
+        3,5,7,9,                # Rejuvenescem (hits)
+        11,12,13,14,15,16,      # Inserem novos (removem menos usados: 1,2,4,6,8,10)
+        3,5,7,9,                # Ainda no cache (hits)
+        3,5,7,9,3,5,7,9,        # Mais hits
+        17,18,19,20             # Novos, removem LRU atuais
+    ]
+
+    tempo_sem_hits = 0
+    tempo_hits = 0
+
+    for arq in arqs_sem_hit:
+        tempo_sem_hits += medir_lru(False, cache_arquivos_sem_hits, arq)
+
+    for arq in arqs_com_hit:
+        tempo_hits += medir_lru(False, cache_arquivos_hits, arq)
+
+    print(f"Tempo sem hits: {tempo_sem_hits}")
+    print(f"Tempo com hits: {tempo_hits}")
+
+    print(f"Hits esperados no caso sem hits: 0\nHits obtidos: {cache_arquivos_sem_hits.get_hits()}")
+    print(f"Hits esperados no caso com hits: 8\nHits obtidos: {cache_arquivos_hits.get_hits()}")
+
+    assert (tempo_sem_hits > tempo_hits)
+    assert (cache_arquivos_sem_hits.get_hits() == 0)
+    assert (cache_arquivos_hits.get_hits() == 16)
