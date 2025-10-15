@@ -1,0 +1,40 @@
+==================================================
+RELATORIO DE PERFORMANCE DOS ALGORITMOS DE CACHE
+==================================================
+
+Simulacao concluida com um total de 7200 solicitacoes.
+
+--- Analise do Algoritmo: LFU ---
+  - Total de Hits: 542
+  - Total de Misses: 1258
+  - Taxa de Sucesso (Hit Rate): 30.11%
+  - Tempo Medio de Resposta: 0.011351 segundos
+
+--- Analise do Algoritmo: LRU ---
+  - Total de Hits: 367
+  - Total de Misses: 1433
+  - Taxa de Sucesso (Hit Rate): 20.39%
+  - Tempo Medio de Resposta: 0.011997 segundos
+
+--- Analise do Algoritmo: FIFO ---
+  - Total de Hits: 384
+  - Total de Misses: 1416
+  - Taxa de Sucesso (Hit Rate): 21.33%
+  - Tempo Medio de Resposta: 0.012058 segundos
+
+--- Analise do Algoritmo: MRU ---
+  - Total de Hits: 352
+  - Total de Misses: 1448
+  - Taxa de Sucesso (Hit Rate): 19.56%
+  - Tempo Medio de Resposta: 0.012094 segundos
+
+
+--- Analise Especifica do Padrao Ponderado ---
+  - Taxa de Sucesso para LFU: 35.00%
+  - Taxa de Sucesso para LRU: 18.33%
+  - Taxa de Sucesso para FIFO: 18.17%
+  - Taxa de Sucesso para MRU: 15.17%
+
+--- Conclusao ---
+O algoritmo com a maior taxa de sucesso geral foi o 'LFU' com 30.11%.
+Recomenda-se a utilizacao deste algoritmo para a aplicacao final.
